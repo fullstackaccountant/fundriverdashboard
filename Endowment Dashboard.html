@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endowment Executive Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F3F4F6; }
+        .card { background-color: rgb(255, 255, 255); border-radius: 0.50rem; padding: 1.0rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
+        .loader { border-top-color: #3b82f6; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="pt-3 md:pt-4 lg:pt-10 pb-6 md:pb-8 lg:pb-20 px-6 md:px-8 lg:px-20">
+
+    <!-- Header -->
+    <header class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Endowment Performance Dashboard</h1>
+            <p class="text-gray-500 mt-1">Summary Report as of <span id="selectedDate">loading...</span></p>
+        </div>
+        <div class="mt-4 md:mt-0 flex flex-wrap gap-3">
+             <!-- Data Source Badge -->
+             <div class="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
+                <span class="text-xs text-gray-500 block uppercase tracking-wide">Data Source</span>
+                <span id="source-badge" class="font-semibold text-gray-700 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-gray-300"></span> Initializing...
+                </span>
+             </div>
+
+             <!-- ADDED: Date Filter Dropdown Container -->
+             <div class="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 min-w-[160px]">
+                <label for="date-filter" class="text-xs text-gray-500 block uppercase tracking-wide">Reporting Period</label>
+                <div class="flex items-center">
+                    <svg class="w-4 h-4 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <!-- The select element that triggers updates -->
+                    <select id="date-filter" class="bg-transparent font-semibold text-gray-700 outline-none cursor-pointer w-full hover:text-blue-600 transition-colors">
+                        <!-- Options injected via JS -->
+                    </select>
+                </div>
+             </div>
+        </div>
+    </header>
+
+
+
+
+    <!-- Loading State -->
+    <div id="loading-indicator" class="flex flex-col items-center justify-center h-64">
+        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+        <p class="text-gray-500 font-medium">Connecting to Airtable...</p>
+        <p class="text-xs text-gray-400 mt-2">If connection fails, static data will be loaded.</p>
+    </div>
+
+    <!-- Error/Warning Banner (Hidden by default) -->
+    <div id="warning-message" class="hidden bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-yellow-700">
+                    <span class="font-bold">Connection Failed:</span> 
+                    <span id="warning-text">Using static fallback data.</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Main Content (Hidden until loaded) -->
+    <div id="dashboard-content" class="hidden fade-in">
+        
+        <!-- Key Metrics Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 h-30" id="metrics-container"></div>
+
+        <!-- Charts Row 1 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="card lg:col-span-2 ">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">Total Market Value Trend</h3>
+                <div class="h-96">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h3 class="text-lg font-semibold text-gray-700 mb-0.5">Fund Type</h3>
+                <p class="text-gray-500 mt-1"><span class="formatted-date"></span></p>
+                <div class="h-96 flex justify-center">
+                    <canvas id="classificationChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 2 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="card">
+                <h3 class="text-lg font-semibold text-gray-700 mb-0.5">Market Value by Purpose</h3>
+                <p class="text-gray-500 mt-1 mb-2"><span class="formatted-date"></span></p>
+                <div class="h-64">
+                    <canvas id="purposeChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h3 class="text-lg font-semibold text-gray-700 mb-0.5">Realized vs. Unrealized Gains</h3>
+                <p class="text-gray-500 mt-1 mb-2"><span class="formatted-date"></span></p>
+                <div class="h-64">
+                    <canvas id="gainsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Funds Table -->
+        <div class="card overflow-hidden">
+            <h3 class="text-lg font-semibold text-gray-700 mb-0.5">Endowment Transaction Rollforward</h3>
+            <p class="text-gray-500 mt-1 mb-2"><span class="formatted-date"></span></p>
+            <div class="overflow-x-auto">
+                <table class="w-full table-fixed divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-2 text-left text-s font-bold text-gray-500 uppercase tracking-wider">Fund Name</th>
+                            <th class="px-3 py-2 text-left text-s font-bold text-gray-500 uppercase tracking-wider">Purpose</th>
+                            <th class="px-3 py-2 text-right text-s font-bold text-gray-500 uppercase tracking-wider">Beginning MV</th>
+                            <th class="px-3 py-2 text-right text-s font-bold text-gray-500 uppercase tracking-wider">Net Investment Activity</th>
+                            <th class="px-3 py-2 text-right text-s font-bold text-gray-500 uppercase tracking-wider">Net Fund Activity</th>
+                            <th class="px-3 py-2 text-right text-s font-bold text-gray-500 uppercase tracking-wider">Ending MV</th>
+                            <th class="px-3 py-2 text-right text-s font-bold text-gray-500 uppercase tracking-wider">Change (MoM)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="top-funds-body"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="float-right">
+            <p class="text-gray-500 mt-1 mb-2 pt-8 ">Powered by Fundriver Balance</p>
+        </div>
+    </div>
+
+
+
+
+
+<script>
+    const AIRTABLE_API_KEY = 'patNkGybog51MCTiX.36d122f88ca9256694b0e486716ad54deb80deaade897ed47812ee0fc28b40bc'; 
+    const BASE_ID = 'appi2ZISKIKgr6Hyr';          
+    const TABLE_ID = 'tblJgNTacuGqo4hn2'; 
+
+
+
+        // --- Global State ---
+    let globalData = [];
+    let charts = {}; // Store Chart.js instances to allow destroying/updating
+
+    // --- Utilities ---
+    const parseCurrency = (val) => {
+        if (typeof val === 'number') return val;
+        if (!val) return 0;
+        let clean = val.toString().replace(/,/g, '');
+        if (clean.includes('(') && clean.includes(')')) {
+            clean = '-' + clean.replace(/[()]/g, '');
+        }
+        return parseFloat(clean);
+    };
+
+    const formatCurrency = (num) => {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num);
+    };
+
+
+
+    // --- UI State Management ---
+    function setSourceStatus(isLive, message) {
+        const badge = document.getElementById('source-badge');
+        if (isLive) {
+            badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-green-500"></span> Airtable`;
+        } else {
+            badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-yellow-500"></span> Static Data (Fallback)`;
+            document.getElementById('warning-message').classList.remove('hidden');
+            document.getElementById('warning-text').textContent = message || "Connection failed. Using static fallback data.";
+        }
+    }
+
+
+
+
+    // --- API Fetch Logic ---
+    async function fetchAirtableData() {
+        if (AIRTABLE_API_KEY.includes('YOUR_PERSONAL_ACCESS') || BASE_ID.includes('YOUR_BASE_ID')) {
+            console.warn("Airtable placeholders detected. No live data available.");
+            // Do not fall back to embeddedData; return an empty dataset and flag as not live.
+            return { data: [], isLive: false, error: "Credentials not configured" };
+        }
+
+        let allRecords = [];
+        let offset = null;
+        
+        try {
+            do {
+                let url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_ID)}`;
+                if (offset) url += `?offset=${offset}`;
+
+                const response = await fetch(url, {
+                    headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const pageRecords = data.records.map(r => r.fields);
+                allRecords = [...allRecords, ...pageRecords];
+                offset = data.offset;
+            } while (offset);
+
+            return { data: allRecords, isLive: true };
+
+        } catch (error) {
+            console.error("Airtable fetch failed:", error);
+            // Do not use embedded fallback data — return an empty dataset and surface the error
+            return { data: [], isLive: false, error: error.message };
+        }
+    }
+
+
+
+
+    // --- Initialization & Main Logic ---
+    function initDashboard(rawData) {
+        if (!rawData || rawData.length === 0) return;
+        globalData = rawData;
+
+        // 1. Populate Date Dropdown
+        const uniqueDates = [...new Set(rawData.map(d => d["Date"]))].sort((a,b) => new Date(b) - new Date(a));
+        const dateSelect = document.getElementById('date-filter');
+        dateSelect.innerHTML = uniqueDates.map(d => `<option value="${d}">${d}</option>`).join('');
+
+        // 2. Render Trend Chart (Runs Once - Uses ALL Data)
+        renderTrendChart(rawData);
+
+        // 3. Initial Render of Date-Specific Views (Uses Latest Date)
+        updateDateSpecificViews(uniqueDates[0]);
+
+        // 4. Add Event Listener for Filter
+        dateSelect.addEventListener('change', (e) => {
+            updateDateSpecificViews(e.target.value);
+        });
+
+        // 5. Show Content
+        document.getElementById('loading-indicator').classList.add('hidden');
+        document.getElementById('dashboard-content').classList.remove('hidden');
+    }
+
+
+    // --- View Updater ---
+    function updateDateSpecificViews(selectedDate) {
+        // Filter data for the selected date
+        const periodData = globalData.filter(d => d["Date"] === selectedDate);
+        
+        // Update the selected date display
+        document.getElementById('selectedDate').textContent = selectedDate;
+        
+        // Format date from MM/DD/YYYY to MMM YYYY
+        const formattedDateObj = new Date(selectedDate);
+        const formattedDate = formattedDateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+               
+
+        // Update components
+        renderMetrics(periodData, selectedDate);
+        renderClassificationChart(periodData);
+        renderPurposeChart(periodData);
+        renderGainsChart(periodData);
+        renderTopFundsTable(periodData);
+
+            // Update all elements with the class 'formatted-date'
+        document.querySelectorAll('.formatted-date').forEach(el => {
+            el.textContent = formattedDate;
+        });
+    }
+
+
+    // --- Component Renderers ---
+
+    function renderTrendChart(data) {
+        // Group by Date for the Line Chart
+        const groupedByDate = data.reduce((acc, curr) => {
+            if (!curr["Date"] || !curr["Ending MV"]) return acc;
+            if (!acc[curr["Date"]]) acc[curr["Date"]] = 0;
+            acc[curr["Date"]] += parseCurrency(curr["Ending MV"]);
+            return acc;
+        }, {});
+        
+        const sortedDates = Object.keys(groupedByDate).sort((a,b) => new Date(a) - new Date(b));
+        const trendValues = sortedDates.map(d => groupedByDate[d]);
+
+
+        const hggroupedByDate = data.reduce((acc, curr) => {
+            if (!curr["Date"] || !curr["Ending Historical Gift"]) return acc;
+            if (!acc[curr["Date"]]) acc[curr["Date"]] = 0;
+            acc[curr["Date"]] += parseCurrency(curr["Ending Historical Gift"]);
+            return acc;
+        }, {});
+        
+        const hgsortedDates = Object.keys(hggroupedByDate).sort((a,b) => new Date(a) - new Date(b));
+        const hgtrendValues = hgsortedDates.map(d => hggroupedByDate[d]);
+
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        
+        //Ending Historical Gift
+        
+        
+        // Trend chart is static, no need to store in 'charts' for updates
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: sortedDates.map(d => {
+                    const dateObj = new Date(d);
+                    return dateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                }),
+                datasets: [
+                    {
+                    label: 'Total Market Value',
+                    data: trendValues,
+                    borderColor: '#ff6600',
+                    backgroundColor: 'rgba(255, 102, 0, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                },
+                {
+                    label: 'Historical Gift',
+                    data: hgtrendValues,
+                    borderColor: '#003665',
+                    backgroundColor: 'rgba(0, 54, 101, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }
+            
+            ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true, position: 'bottom' } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { callback: (val) => '$' + (val/1000000).toFixed(0) + 'M'} },
+                    // x: { ticks: { font: {weight: 'bold'}}}
+                }
+            }
+        });
+    }
+
+    function renderMetrics(data, dateLabel) {
+        const totalMV = data.reduce((sum, item) => sum + parseCurrency(item["Ending MV"]), 0);
+        const totalRealized = data.reduce((sum, item) => sum + parseCurrency(item["Realized Gains"]), 0);
+        const totalHistoricalgift = data.reduce((sum, item) => sum + parseCurrency(item["Ending Historical Gift"]), 0);
+        const totalFunds = data.length;
+        const kpimv = data.reduce((sum, item) => sum + parseCurrency(item["Ending MV"]), 0);
+        const kpistart = data.reduce((sum, item) => sum + parseCurrency(item["Beginning MV"]), 0);
+        const kpichange = kpistart === 0 ? 0 : ((kpimv - kpistart) / kpistart) * 100;
+
+        const metricsHtml = `
+            <div class="card border-l-4 border-t-4 border-blue-900">
+                <p class="text-m text-gray-700 font-bold">Total Market Value</p>
+                <p class="text-gray-500 mt-1 text-xs"><span class="formatted-date"></span></p>
+                <p class="text-2xl font-medium text-gray-800 mt-1">${formatCurrency(totalMV)}</p>
+                <p class="text-xs text-gray-500 mt-1 font-medium"><span class="${kpichange >= 0 ? 'text-green-600' : 'text-red-600'} font-bold">${kpichange.toFixed(2)}%</span> vs last period</p>
+            </div>
+            <div class="card border-l-4 border-t-4 border-orange-500">
+                <p class="text-m text-gray-700 font-bold">Historical Gift</p>
+                <p class="text-gray-500 mt-1 text-xs"><span class="formatted-date"></span></p>
+                <p class="text-2xl font-medium text-gray-800 mt-1">${formatCurrency(totalHistoricalgift)}</p>
+            </div>
+            <div class="card border-l-4 border-t-4 border-blue-500">
+                <p class="text-m text-gray-700 font-bold">Total Funds Managed</p>
+                <p class="text-gray-500 mt-1 text-xs"><span class="formatted-date"></span></p>
+                <p class="text-2xl font-medium text-gray-800 mt-1">${totalFunds}</p>
+            </div>
+                <div class="card border-l-4 border-t-4 border-red-400">
+                <p class="text-m text-gray-700 font-bold">Funds Underwater</p>
+                <p class="text-gray-500 mt-1 text-xs"><span class="formatted-date"></span></p>
+                <p class="text-2xl font-medium text-gray-800 mt-1">1</p>
+            </div>
+        `;
+        document.getElementById('metrics-container').innerHTML = metricsHtml;
+    }
+
+    function renderClassificationChart(data) {
+        const ctx = document.getElementById('classificationChart');
+        if (charts['classification']) charts['classification'].destroy();
+
+        const fundtypeData = data.reduce((acc, curr) => {
+            const type = curr["Fund Type"] || "Other";
+            if (!acc[type]) acc[type] = 0;
+            acc[type] += parseCurrency(curr["Ending MV"]);
+            return acc;
+        }, {});
+
+        charts['classification'] = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(fundtypeData),
+                datasets: [{
+                    data: Object.values(fundtypeData),
+                    backgroundColor: ['#003665', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6'],
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'right' } }
+            }
+        });
+    }
+
+    function renderPurposeChart(data) {
+        const ctx = document.getElementById('purposeChart');
+        if (charts['purpose']) charts['purpose'].destroy();
+
+        const purposeData = data.reduce((acc, curr) => {
+            const type = curr["Purpose"] || "Other";
+            if (!acc[type]) acc[type] = 0;
+            acc[type] += parseCurrency(curr["Ending MV"]);
+            return acc;
+        }, {});
+
+        const purposeDataArray = Object.keys(purposeData).map(key => ({
+            label: key,
+            value: purposeData[key]
+        }));
+    
+        purposeDataArray.sort((a, b) => b.value - a.value);
+        const sortedLabels = purposeDataArray.map(item => item.label);
+        const sortedValues = purposeDataArray.map(item => item.value);
+
+        charts['purpose'] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: sortedLabels,
+                datasets: [{
+                    label: 'Market Value',
+                    data: sortedValues,
+                    backgroundColor: '#007DB8',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { ticks: { callback: (val) => '$' + (val/1000000).toFixed(1) + 'M' } }
+                }
+            }
+        });
+    }
+
+    function renderGainsChart(data) {
+        const ctx = document.getElementById('gainsChart');
+        if (charts['gains']) charts['gains'].destroy();
+
+        const totalRealized = data.reduce((sum, item) => sum + parseCurrency(item["Realized Gains"]), 0);
+        const totalUnrealized = data.reduce((sum, item) => sum + parseCurrency(item["Unrealized Gains"]), 0);
+
+        charts['gains'] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Realized Gains', 'Unrealized Gains'],
+                datasets: [{
+                    label: 'USD Amount',
+                    data: [totalRealized, totalUnrealized],
+                    backgroundColor: ['#3b82f6', '#10b981'],
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    function renderTopFundsTable(data) {
+        const topFunds = [...data]
+            .filter(fund => fund["Fund ID"] !== '400000')
+            .sort((a, b) => parseCurrency(b["Ending MV"]) - parseCurrency(a["Ending MV"]))
+           // .slice(0, 10);
+
+        // Columns to sum for Net Investment Activity per fund.
+        const netinvestmentActivityCols = [
+            "Realized Gains",
+            "Unrealized Gains",
+            "Investment Fees",
+            "Income"
+        ];
+
+        const netfundActivityCols = [
+            "Gifts All",
+            "Distributions All",
+            "Expenses All",
+            "Income to Principal",
+            "Transfers All"
+
+        ];
+
+        const tableHtml = topFunds.map(fund => {
+            const mv = parseCurrency(fund["Ending MV"]);
+            const start = parseCurrency(fund["Beginning MV"]);
+            const change = start === 0 ? 0 : ((mv - start) / start) * 100;
+            const changeColor = change >= 0 ? 'text-green-600' : 'text-red-600';
+            const fundIdDisplay = fund["Fund ID"] !== undefined ? String(fund["Fund ID"]) : '';
+
+            // Sum the configured columns for this fund to get Net Investment Activity
+            const netinvestmentActivity = netinvestmentActivityCols.reduce((s, col) => s + parseCurrency(fund[col]), 0);
+            const netinvestColor = netinvestmentActivity >= 0 ? 'text-green-600' : 'text-red-600';
+            const netfundActivity = netfundActivityCols.reduce((s, col) => s + parseCurrency(fund[col]), 0);
+            const netfundColor = netfundActivity >= 0 ? 'text-green-600' : 'text-red-600';
+
+
+            return `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 overflow-hidden text-ellipsis">${fundIdDisplay ? `(${fundIdDisplay}) ` : ''}${fund["Fund Name"]}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${fund["Purpose"]}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-mono">${formatCurrency(start)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-mono ${netinvestColor}">${formatCurrency(netinvestmentActivity)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-mono ${netfundColor}">${formatCurrency(netfundActivity)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-mono">${formatCurrency(mv)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${changeColor}">
+                        ${change.toFixed(2)}%
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        document.getElementById('top-funds-body').innerHTML = tableHtml;
+    }
+
+    // --- Bootstrapper ---
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchAirtableData().then(result => {
+            setSourceStatus(result.isLive, result.error);
+            initDashboard(result.data);
+        });
+    });
+
+
+</script>
+
+</body>
+</html>
