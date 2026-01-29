@@ -42,7 +42,7 @@ The Endowment Executive Dashboard is a standalone HTML application that connects
 ### Setup Instructions
 
 1. **Download the Dashboard**
-   - Download `Endowment Dashboard.html` from this repository
+   - Download `Endowment Dashboard.html` from the `docs` folder in this repository
    - Save it to your local computer
 
 2. **Open in Browser**
