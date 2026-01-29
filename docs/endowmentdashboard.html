@@ -2,7 +2,7 @@
 <html lang="en">
 <!--
 ================================================================================
-ENDOWMENT PERFORMANCE DASHBOARD
+ENDOWMENT DASHBOARD
 ================================================================================
 Description: Interactive financial dashboard for viewing endowment fund data
              stored in Airtable. Displays key metrics, trends, and fund details.
@@ -58,7 +58,7 @@ SECURITY NOTE:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Endowment Performance Dashboard - View and analyze endowment fund financial data">
+    <meta name="description" content="Endowment Dashboard - View and analyze endowment fund financial data">
     <title>Endowment Executive Dashboard</title>
     
     <!-- ===== EXTERNAL LIBRARIES ===== -->
@@ -1099,7 +1099,7 @@ SECURITY NOTE:
                     spellcheck="false"
                     title="Click to edit title"
                     onblur="saveDashboardTitle()"
-                    onkeydown="handleTitleKeydown(event)">Endowment Performance Dashboard</h1>
+                    onkeydown="handleTitleKeydown(event)">Endowment Dashboard</h1>
                 <p class="text-gray-500 mt-1 flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -1658,7 +1658,7 @@ SECURITY NOTE:
  * ENDOWMENT DASHBOARD - JAVASCRIPT APPLICATION
  * ============================================================================
  * 
- * This script powers the Endowment Performance Dashboard by:
+ * This script powers the Endowment Dashboard by:
  * - Managing secure API credential storage (localStorage)
  * - Fetching data from Airtable API
  * - Rendering charts and visualizations
@@ -1950,8 +1950,8 @@ function saveDashboardTitle() {
     
     // Don't save empty titles
     if (!newTitle) {
-        titleElement.textContent = 'Endowment Performance Dashboard';
-        setStoredValue(STORAGE_KEYS.DASHBOARD_TITLE, 'Endowment Performance Dashboard');
+        titleElement.textContent = 'Endowment Dashboard';
+        setStoredValue(STORAGE_KEYS.DASHBOARD_TITLE, 'Endowment Dashboard');
         return;
     }
     
@@ -1971,7 +1971,7 @@ function handleTitleKeydown(event) {
         event.target.blur(); // This triggers saveDashboardTitle via onblur
     } else if (event.key === 'Escape') {
         // Restore saved title
-        const savedTitle = getStoredValue(STORAGE_KEYS.DASHBOARD_TITLE) || 'Endowment Performance Dashboard';
+        const savedTitle = getStoredValue(STORAGE_KEYS.DASHBOARD_TITLE) || 'Endowment Dashboard';
         event.target.textContent = savedTitle;
         event.target.blur();
     }
