@@ -1,5 +1,8 @@
 # Endowment Executive Dashboard
 
+> **Repository:** fundriverdashboard  
+> **Product Name:** Endowment Executive Dashboard
+
 An interactive, browser-based financial dashboard for viewing and analyzing endowment fund performance data stored in Airtable.
 
 ## 📊 Overview
@@ -133,11 +136,11 @@ For Airtable setup assistance or dashboard customization support, please contact
 
 ## 📝 License
 
-[Add your license information here]
+This project's license has not yet been specified. Please contact the repository owner for licensing information.
 
-## 👥 Author
+## 👥 Credits
 
-[Your Organization Name]
+Developed for endowment fund management and financial reporting.
 
 ---
 
