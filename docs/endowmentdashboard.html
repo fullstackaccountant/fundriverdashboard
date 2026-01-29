@@ -1672,6 +1672,17 @@ SECURITY NOTE:
 // ============================================================================
 
 /**
+ * Default Airtable API credentials for demo data.
+ * These allow visitors to see the dashboard in action without configuration.
+ * Users can override these with their own credentials in Settings.
+ */
+const DEFAULT_API_CREDENTIALS = {
+    API_KEY: 'patNkGybog51MCTiX.36d122f88ca9256694b0e486716ad54deb80deaade897ed47812ee0fc28b40bc',
+    BASE_ID: 'appi2ZISKIKgr6Hyr',
+    TABLE_ID: 'tblJgNTacuGqo4hn2'
+};
+
+/**
  * LocalStorage keys for storing API credentials and brand settings.
  * These are stored securely in the browser's localStorage.
  */
@@ -2666,25 +2677,19 @@ function hideLoading() {
  * @returns {Promise<Object>} - Object with data array, isLive flag, and optional error
  */
 async function fetchAirtableData() {
-    // Retrieve stored credentials
-    const apiKey = getStoredValue(STORAGE_KEYS.API_KEY);
-    const baseId = getStoredValue(STORAGE_KEYS.BASE_ID);
-    const tableId = getStoredValue(STORAGE_KEYS.TABLE_ID);
+    // Retrieve stored credentials or use defaults for demo
+    const apiKey = getStoredValue(STORAGE_KEYS.API_KEY) || DEFAULT_API_CREDENTIALS.API_KEY;
+    const baseId = getStoredValue(STORAGE_KEYS.BASE_ID) || DEFAULT_API_CREDENTIALS.BASE_ID;
+    const tableId = getStoredValue(STORAGE_KEYS.TABLE_ID) || DEFAULT_API_CREDENTIALS.TABLE_ID;
+    
+    // Check if using default demo credentials
+    const isUsingDefaults = !getStoredValue(STORAGE_KEYS.API_KEY);
     
     // Debug logging
     console.log('API Key exists:', !!apiKey);
     console.log('Base ID:', baseId);
     console.log('Table ID:', tableId);
-    
-    // Check if credentials are configured
-    if (!apiKey || !baseId || !tableId) {
-        console.warn('Airtable credentials not configured.');
-        return { 
-            data: [], 
-            isLive: false, 
-            error: 'API credentials not configured. Click "Configure API" to set up your connection.' 
-        };
-    }
+    console.log('Using demo credentials:', isUsingDefaults);
 
     let allRecords = [];
     let offset = null;
@@ -4886,12 +4891,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Show configuration prompt if no data
             hideLoading();
             document.getElementById('warning-message').classList.remove('hidden');
-            
-            // Auto-open config modal if credentials not set
-            const hasCredentials = getStoredValue(STORAGE_KEYS.API_KEY);
-            if (!hasCredentials) {
-                setTimeout(openConfigModal, 1000);
-            }
         }
     } catch (error) {
         console.error('Dashboard initialization failed:', error);
