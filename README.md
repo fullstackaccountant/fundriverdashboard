@@ -133,11 +133,12 @@ For Airtable setup assistance or dashboard customization support, please contact
 
 ## 📝 License
 
-[Add your license information here]
+Feel free to use.
 
 ## 👥 Author
 
-[Your Organization Name]
+Richard Westerfield
+Account Executive for EverTrue
 
 ---
 
